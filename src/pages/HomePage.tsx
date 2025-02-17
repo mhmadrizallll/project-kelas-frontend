@@ -39,8 +39,8 @@ const HomePage = () => {
       <h2 className="text-center py-5">Books List</h2>
       <div className="row">
         {books.map((book) => (
-          <div className="col-md-3">
-            <Card key={book.id} className="mb-3">
+          <div key={book.id} className="col-md-3">
+            <Card className="mb-3">
               <Card.Img
                 variant="top"
                 src={`http://localhost:3000${book.image}`}

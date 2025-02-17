@@ -1,7 +1,9 @@
 import axios from "axios";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { Button, Container, Form } from "react-bootstrap";
+import { CredentialResponse, GoogleLogin } from "@react-oauth/google";
+import { jwtDecode } from "jwt-decode";
 
 const Login = () => {
   const [form, setForm] = useState({
@@ -15,6 +17,23 @@ const Login = () => {
   });
 
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      try {
+        const decodedToken: { role: string } = jwtDecode(token);
+        if (decodedToken.role === "admin") {
+          navigate("/admin");
+        } else {
+          navigate("/home");
+        }
+      } catch (error) {
+        console.error(error);
+        localStorage.removeItem("token");
+      }
+    }
+  });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -48,10 +67,43 @@ const Login = () => {
       );
       const token = response.data.data.token;
       localStorage.setItem("token", token);
-      navigate("/home");
+      // decodedToken by role
+      const decodedToken: { role: string } = jwtDecode(token);
+      navigate(decodedToken.role === "admin" ? "/admin" : "/home");
     } catch (error) {
       console.error(error);
     }
+  };
+
+  const onSuccess = async (res: CredentialResponse) => {
+    const token = res.credential;
+    console.log("Google token:", token);
+    try {
+      const response = await axios.post(
+        "http://localhost:3000/api/v1/users/login/auth/google",
+        {
+          token: token,
+        },
+        {
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+        }
+      );
+      const userToken = response.data.token;
+      localStorage.setItem("token", userToken);
+
+      // decoded untuk mendapatkan role
+      const decodedToken: { role: string } = jwtDecode(userToken);
+      console.log(decodedToken.role);
+      window.location.href = "/home";
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const onFailure = () => {
+    console.log("Login Gagal");
   };
 
   return (
@@ -102,6 +154,7 @@ const Login = () => {
           Login
         </Button>
       </Form>
+      <GoogleLogin onSuccess={onSuccess} onError={onFailure}></GoogleLogin>
     </Container>
   );
 };
