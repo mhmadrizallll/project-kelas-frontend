@@ -12,6 +12,7 @@ import Dashboard from "./pages/admin/Dashboard";
 import UpdateUser from "./components/admin/UpdateUser";
 import UpdateBook from "./components/admin/UpdateBook";
 import CreateBook from "./components/admin/CreateBook";
+import RentalBook from "./components/member/RentalBook";
 
 function App() {
   return (
@@ -25,6 +26,7 @@ function App() {
         {/* Member Route */}
         <Route element={<MemberRoute />}>
           <Route path="/home" element={<HomePage />} />
+          <Route path="/books/:id" element={<RentalBook />} />
         </Route>
 
         {/* Admin Route */}

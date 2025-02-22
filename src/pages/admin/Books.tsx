@@ -1,4 +1,3 @@
-import React from "react";
 import { Button, Container, Pagination, Table } from "react-bootstrap";
 import { useEffect, useState, useMemo } from "react";
 import axios from "axios";
@@ -136,7 +135,7 @@ const Books = () => {
         <tbody>
           {paginatedBooks.length === 0 ? (
             <tr className="text-center fw-bold">
-              <td colSpan={4}>No books found</td>
+              <td colSpan={6}>No books found</td>
             </tr>
           ) : (
             paginatedBooks.map((book, index) => (
