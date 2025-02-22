@@ -4,6 +4,7 @@ import App from "./App.tsx";
 import { BrowserRouter } from "react-router";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { GoogleOAuthProvider } from "@react-oauth/google";
+import "./dist/css/style.css";
 
 const CLIENT_ID =
   "60480331234-qfs6mksgeq8o6j4egg6svm5n8es9aqc5.apps.googleusercontent.com";

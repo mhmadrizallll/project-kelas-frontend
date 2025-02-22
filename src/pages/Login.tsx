@@ -1,33 +1,49 @@
 import axios from "axios";
-import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router";
-import { Button, Container, Form } from "react-bootstrap";
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router";
+import { Button, Container, Form, Alert } from "react-bootstrap";
 import { CredentialResponse, GoogleLogin } from "@react-oauth/google";
 import { jwtDecode } from "jwt-decode";
+import * as yup from "yup";
+import { yupResolver } from "@hookform/resolvers/yup";
+import { useForm } from "react-hook-form";
+
+interface LoginForm {
+  email: string;
+  password: string;
+}
+
+const schema = yup.object().shape({
+  email: yup
+    .string()
+    .email("Email must be a valid email")
+    .required("Email is required"),
+  password: yup
+    .string()
+    .min(4, "Password must be at least 4 characters")
+    .required("Password is required"),
+});
 
 const Login = () => {
-  const [form, setForm] = useState({
-    email: "",
-    password: "",
-  });
-
-  const [errors, setErrors] = useState({
-    email: "",
-    password: "",
-  });
-
+  const [serverError, setServerError] = useState<string>("");
   const navigate = useNavigate();
+
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors },
+  } = useForm<LoginForm>({
+    resolver: yupResolver(schema),
+    mode: "onChange",
+  });
 
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (token) {
       try {
         const decodedToken: { role: string } = jwtDecode(token);
-        if (decodedToken.role === "admin") {
-          navigate("/admin");
-        } else {
-          navigate("/home");
-        }
+        navigate(decodedToken.role === "admin" ? "/admin" : "/home");
       } catch (error) {
         console.error(error);
         localStorage.removeItem("token");
@@ -35,43 +51,34 @@ const Login = () => {
     }
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
-
-  const onSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    const newErrors = { email: "", password: "" };
-    let isValid = true;
-
-    // Validasi email
-    if (!form.email) {
-      newErrors.email = "Please provide a valid email.";
-      isValid = false;
-    }
-
-    // Validasi password minimal 8 karakter
-    if (form.password.length < 4) {
-      newErrors.password = "Password must be at least 4 characters.";
-      isValid = false;
-    }
-
-    setErrors(newErrors);
-    if (!isValid) return;
-
+  const onSubmit = async (data: LoginForm) => {
+    setServerError("");
     try {
       const response = await axios.post(
         "http://localhost:3000/api/v1/users/login",
-        form
+        data
       );
       const token = response.data.data.token;
       localStorage.setItem("token", token);
       // decodedToken by role
       const decodedToken: { role: string } = jwtDecode(token);
       navigate(decodedToken.role === "admin" ? "/admin" : "/home");
-    } catch (error) {
-      console.error(error);
+    } catch (error: any) {
+      console.log("Backend error response:", error.response); // Debugging
+
+      if (error.response && error.response.data) {
+        const { message } = error.response.data;
+
+        // Jika email belum terdaftar
+        if (message.includes("Email not registered")) {
+          setError("email", {
+            type: "server",
+            message: "This email is not registered",
+          });
+        } else if (message.includes("Invalid password")) {
+          setServerError("Email or Password is invalid");
+        }
+      }
     }
   };
 
@@ -108,25 +115,29 @@ const Login = () => {
 
   return (
     <Container
-      className="d-flex flex-column justify-content-center align-items-center border"
+      className="d-flex flex-column justify-content-center align-items-center"
       style={{ height: "100vh" }}
     >
+      <h2 className="mb-3">Login Form</h2>
       {/* Hapus validated={validated} agar tidak ada ceklis */}
-      <Form noValidate onSubmit={onSubmit} style={{ width: "30%" }}>
+      {/* Tampilkan error global jika ada */}
+      {serverError && <Alert variant="danger">{serverError}</Alert>}
+      <Form
+        noValidate
+        onSubmit={handleSubmit(onSubmit)}
+        style={{ width: "30%" }}
+      >
         <Form.Group>
           <Form.Label htmlFor="email">Email :</Form.Label>
           <Form.Control
             type="email"
-            name="email"
             id="email"
-            value={form.email}
-            onChange={handleChange}
+            {...register("email")}
             placeholder="Please enter your email"
             isInvalid={!!errors.email} // Menampilkan error jika ada
-            isValid={form.email.length > 0 && !errors.email}
           />
           <Form.Control.Feedback type="invalid">
-            {errors.email}
+            {errors.email?.message}
           </Form.Control.Feedback>
           <Form.Control.Feedback type="valid">
             Email valid
@@ -137,24 +148,28 @@ const Login = () => {
           <Form.Label htmlFor="password">Password :</Form.Label>
           <Form.Control
             type="password"
-            name="password"
             id="password"
-            value={form.password}
-            onChange={handleChange}
+            {...register("password")}
             placeholder="Please enter your password"
             isInvalid={!!errors.password} // Menampilkan error jika ada
           />
           <Form.Control.Feedback type="invalid">
-            {errors.password}
+            {errors.password?.message}
           </Form.Control.Feedback>
         </Form.Group>
 
         {/* Tidak akan terkena validasi form */}
-        <Button className="form-control mt-3" variant="primary" type="submit">
+        <Button className="form-control my-3" variant="primary" type="submit">
           Login
         </Button>
       </Form>
       <GoogleLogin onSuccess={onSuccess} onError={onFailure}></GoogleLogin>
+      <div className="text-center mt-3">
+        <p className="m-0">You don't have an account?</p>
+        <Link to="/register" className="m-0">
+          Sign up?
+        </Link>
+      </div>
     </Container>
   );
 };
