@@ -86,7 +86,10 @@ const Users = () => {
           Swal.fire("Restored!", "User has been restored.", "success");
           fetchUsers();
         } catch (error: any) {
-          console.error(error);
+          if (error.response && error.response.data) {
+            const { message } = error.response.data;
+            Swal.fire("Error!", message, "error");
+          }
         }
       }
     });
